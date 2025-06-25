@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.0.1/dist/socket.io.min.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=<%= process.env.map_api_key %>&callback=initMap" async defer></script>
+
+    <style>
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Realtime Device Tracker</h1>
+    <div id="map"></div>
+
+    <script>
+        let map;
+        let markers = {}; // Store markers by device ID
+
+        // Initialize Google Map
+        function initMap() {
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: { lat: 0, lng: 0 },
+                zoom: 2,
+            });
+
+            // Set up Socket.io connection to the server
+            const socket = io();
+
+            // Listen for location updates from server
+            socket.on('location-update', (data) => {
+                const { deviceId, lat, lng } = data;
+
+                // If marker exists, update its position, otherwise create a new one
+                if (markers[deviceId]) {
+                    markers[deviceId].setPosition(new google.maps.LatLng(lat, lng));
+                } else {
+                    markers[deviceId] = new google.maps.Marker({
+                        position: new google.maps.LatLng(lat, lng),
+                        map: map,
+                        title: `Device: ${deviceId}`,
+                    });
+                }
+
+                // Optionally, adjust the map's center and zoom level based on the latest position
+                map.setCenter(new google.maps.LatLng(lat, lng));
+                map.setZoom(10);
+            });
+        }
+
+        // Simulating device location updates
+        function sendLocationUpdate(deviceId, lat, lng) {
+            const socket = io();
+            socket.emit('location-update', { deviceId, lat, lng });
+        }
+
+        // Example: Simulate a location update from a device
+        setInterval(() => {
+            const deviceId = 'device-1';
+            const lat = 37.7749 + (Math.random() - 0.5) * 0.02;  // Randomized location
+            const lng = -122.4194 + (Math.random() - 0.5) * 0.02;
+            sendLocationUpdate(deviceId, lat, lng);
+        }, 5000);
+    </script>
+</body>
+</html>
